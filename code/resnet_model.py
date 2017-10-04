@@ -80,7 +80,7 @@ class ResNet(object):
     else:
       res_func = self._residual
       if self.hps.wide:
-        filters=[16,160,320,640]
+        filters=[16,16*2,32*2,64*2]
       else:
         filters = [16, 16, 32, 64]
       # Uncomment the following codes to use w28-10 wide residual network.
