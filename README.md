@@ -34,3 +34,7 @@ d=(u{b}-u/)sigma{avg}
 
 
 weight-normalization
+
+
+streaming normalization
+总结了基本的normalization 的方式，提出了参考前后batch的streaming normalization的方式
