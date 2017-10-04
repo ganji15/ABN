@@ -32,7 +32,7 @@ from tensorflow.python.training import moving_averages
 HParams = namedtuple('HParams',
                      'batch_size, num_classes, min_lrn_rate, lrn_rate, '
                      'num_residual_units, use_bottleneck, weight_decay_rate, '
-                     'relu_leakiness, optimizer')
+                     'relu_leakiness, optimizer,wide')
 
 
 class ResNet(object):
@@ -79,7 +79,10 @@ class ResNet(object):
       filters = [16, 64, 128, 256]
     else:
       res_func = self._residual
-      filters = [16, 16, 32, 64]
+      if self.hps.wide:
+        filters=[16,160,320,640]
+      else:
+        filters = [16, 16, 32, 64]
       # Uncomment the following codes to use w28-10 wide residual network.
       # It is more memory efficient than very deep residual network and has
       # comparably good performance.
@@ -215,10 +218,13 @@ class ResNet(object):
 
     with tf.variable_scope('sub_add'):
       if in_filter != out_filter:
-        orig_x = tf.nn.avg_pool(orig_x, stride, stride, 'VALID')
-        orig_x = tf.pad(
-            orig_x, [[0, 0], [0, 0], [0, 0],
-                     [(out_filter-in_filter)//2, (out_filter-in_filter)//2]])
+        #zero channel padidng
+        # orig_x = tf.nn.avg_pool(orig_x, stride, stride, 'VALID')
+        # orig_x = tf.pad(
+        #     orig_x, [[0, 0], [0, 0], [0, 0],
+        #              [(out_filter-in_filter)//2, (out_filter-in_filter)//2]])
+        #1x1 convolution
+        orig_x = self._conv('project', orig_x, 1, in_filter, out_filter, stride)
       x += orig_x
 
     tf.logging.debug('image after unit %s', x.get_shape())

@@ -1,5 +1,11 @@
 # ABN
 ABN
+--------codes-------
+scripts/
+文件夹下，build.sh编译  train.sh训练   va.sh测试   look.sh打开tensorboard
+训练和测试可以同时进行，测试可以使用cpu，会使得训练速度下降20%左右。
+
+---------papers----
 
 batch norm:
 在训练的时候会计算average的mean和std

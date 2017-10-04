@@ -31,6 +31,12 @@ tf.app.flags.DEFINE_string('train_data_path', '',
                            'Filepattern for training data.')
 tf.app.flags.DEFINE_string('eval_data_path', '',
                            'Filepattern for eval data')
+tf.app.flags.DEFINE_integer('batch_size', 128,
+                            'Train batch size.')
+tf.app.flags.DEFINE_integer('num_units', 5,
+                            'Train batch size.')
+tf.app.flags.DEFINE_bool('wide', False,
+                         'Whether wide residual network.')
 tf.app.flags.DEFINE_integer('image_size', 32, 'Image side length.')
 tf.app.flags.DEFINE_string('train_dir', '',
                            'Directory to keep training outputs.')
@@ -49,6 +55,7 @@ tf.app.flags.DEFINE_integer('num_gpus', 0,
 
 def train(hps):
   """Training loop."""
+
   images, labels = cifar_input.build_input(
       FLAGS.dataset, FLAGS.train_data_path, hps.batch_size, FLAGS.mode)
   model = resnet_model.ResNet(hps, images, labels, FLAGS.mode)
@@ -69,7 +76,7 @@ def train(hps):
   precision = tf.reduce_mean(tf.to_float(tf.equal(predictions, truth)))
 
   summary_hook = tf.train.SummarySaverHook(
-      save_steps=100,
+      save_steps=10,
       output_dir=FLAGS.train_dir,
       summary_op=tf.summary.merge([model.summaries,
                                    tf.summary.scalar('Precision', precision)]))
@@ -78,7 +85,7 @@ def train(hps):
       tensors={'step': model.global_step,
                'loss': model.cost,
                'precision': precision},
-      every_n_iter=100)
+      every_n_iter=10)
 
   class _LearningRateSetterHook(tf.train.SessionRunHook):
     """Sets learning_rate based on global step."""
@@ -93,14 +100,27 @@ def train(hps):
 
     def after_run(self, run_context, run_values):
       train_step = run_values.results
-      if train_step < 40000:
-        self._lrn_rate = 0.1
-      elif train_step < 60000:
-        self._lrn_rate = 0.01
-      elif train_step < 80000:
-        self._lrn_rate = 0.001
+      stp_epoch=50000/FLAGS.batch_size #50000/batch_size
+      epoch=train_step / stp_epoch
+      if FLAGS.wide:
+        if  epoch< 61:
+          self._lrn_rate = 0.1
+        elif epoch < 121 :
+          self._lrn_rate = 0.02
+        elif epoch < 161:
+          self._lrn_rate = 0.004
+        else:
+          self._lrn_rate = 0.0008
       else:
-        self._lrn_rate = 0.0001
+
+        if train_step < 40000:
+          self._lrn_rate = 0.1
+        elif train_step < 60000:
+          self._lrn_rate = 0.01
+        elif train_step < 80000:
+          self._lrn_rate = 0.001
+        else:
+          self._lrn_rate = 0.0001
 
   with tf.train.MonitoredTrainingSession(
       checkpoint_dir=FLAGS.log_root,
@@ -181,7 +201,7 @@ def main(_):
     raise ValueError('Only support 0 or 1 gpu.')
 
   if FLAGS.mode == 'train':
-    batch_size = 128
+    batch_size = FLAGS.batch_size
   elif FLAGS.mode == 'eval':
     batch_size = 100
 
@@ -194,11 +214,12 @@ def main(_):
                              num_classes=num_classes,
                              min_lrn_rate=0.0001,
                              lrn_rate=0.1,
-                             num_residual_units=5,
+                             num_residual_units=FLAGS.num_units,
                              use_bottleneck=False,
-                             weight_decay_rate=0.0002,
-                             relu_leakiness=0.1,
-                             optimizer='mom')
+                             weight_decay_rate=0.0005 if FLAGS.wide else 0.0002,
+                             relu_leakiness=0.0,
+                             optimizer='mom',
+                             wide=FLAGS.wide)
 
   with tf.device(dev):
     if FLAGS.mode == 'train':
