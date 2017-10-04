@@ -76,7 +76,7 @@ def train(hps):
   precision = tf.reduce_mean(tf.to_float(tf.equal(predictions, truth)))
 
   summary_hook = tf.train.SummarySaverHook(
-      save_steps=10,
+      save_steps=100,
       output_dir=FLAGS.train_dir,
       summary_op=tf.summary.merge([model.summaries,
                                    tf.summary.scalar('Precision', precision)]))
@@ -85,7 +85,7 @@ def train(hps):
       tensors={'step': model.global_step,
                'loss': model.cost,
                'precision': precision},
-      every_n_iter=10)
+      every_n_iter=100)
 
   class _LearningRateSetterHook(tf.train.SessionRunHook):
     """Sets learning_rate based on global step."""
@@ -128,6 +128,7 @@ def train(hps):
       chief_only_hooks=[summary_hook],
       # Since we provide a SummarySaverHook, we need to disable default
       # SummarySaverHook. To do that we set save_summaries_steps to 0.
+      save_checkpoint_secs=300,
       save_summaries_steps=0,
       config=tf.ConfigProto(allow_soft_placement=True)) as mon_sess:
     while not mon_sess.should_stop():
